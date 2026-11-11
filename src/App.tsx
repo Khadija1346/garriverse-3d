@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import {
   ArcRotateCamera,
   Color3,
+  DirectionalLight,
+  ShadowGenerator,
   Color4,
   Engine,
   HemisphericLight,
@@ -57,8 +59,15 @@ export default function App() {
     camera.panningSensibility = 85;
     camera.attachControl(canvas, true);
 
-    const light = new HemisphericLight("sun", new Vector3(0.2, 1, 0.3), scene);
-    light.intensity = 0.95;
+    const light = new HemisphericLight("ambient-sky", new Vector3(0.2, 1, 0.3), scene);
+    light.intensity = 0.82;
+    const sun = new DirectionalLight("golden-hour-sun", new Vector3(-0.55, -1, 0.42), scene);
+    sun.position = new Vector3(-8, 14, -7);
+    sun.intensity = 1.35;
+    const shadows = new ShadowGenerator(1024, sun);
+    shadows.useBlurExponentialShadowMap = true;
+    shadows.blurKernel = 24;
+    shadows.bias = 0.0005;
 
     const mat = (name: string, hex: string) => {
       const material = new StandardMaterial(name, scene);
@@ -76,6 +85,7 @@ export default function App() {
     const ground = MeshBuilder.CreateGround("island", { width: 14, height: 12 }, scene);
     ground.position.y = -0.12;
     ground.material = grass;
+    ground.receiveShadows = true;
 
     const road = MeshBuilder.CreateBox("farm-path", { width: 14, height: 0.08, depth: 1.1 }, scene);
     road.position.set(0, -0.02, 2.55);
@@ -124,6 +134,133 @@ export default function App() {
       const crown = MeshBuilder.CreateSphere(`tree-crown-${i}`, { diameter: 1.5, segments: 8 }, scene);
       crown.position.set(x, 1.25, z);
       crown.material = crop;
+    });
+
+    // Premium environment pass: layered architecture, paths, props and a living farm silhouette.
+    const wood = mat("warm-wood", "#70452d");
+    const timber = mat("light-timber", "#bd8c54");
+    const plaster = mat("cream-plaster", "#f0dcb4");
+    const terracotta = mat("terracotta-roof", "#a94732");
+    const leafLight = mat("leaf-light", "#70a94e");
+    const leafDark = mat("leaf-dark", "#285b38");
+    const stone = mat("river-stone", "#87918a");
+    const gold = mat("lantern-gold", "#f5c86b");
+    const darkMetal = mat("dark-metal", "#39433c");
+
+    const cast = (mesh: Mesh) => { mesh.receiveShadows = true; shadows.addShadowCaster(mesh); return mesh; };
+    const box = (name: string, w: number, h: number, d: number, x: number, y: number, z: number, material: StandardMaterial) => {
+      const m = MeshBuilder.CreateBox(name, { width: w, height: h, depth: d }, scene);
+      m.position.set(x, y, z); m.material = material; return cast(m);
+    };
+    const roof = (name: string, x: number, y: number, z: number, w: number, d: number) => {
+      const r = MeshBuilder.CreateCylinder(name, { diameterTop: 0, diameterBottom: Math.max(w, d) * 1.48, height: 1.05, tessellation: 4 }, scene);
+      r.scaling.set(w / Math.max(w, d), 1, d / Math.max(w, d));
+      r.rotation.y = Math.PI / 4; r.position.set(x, y, z); r.material = terracotta; return cast(r);
+    };
+
+    // Main homestead: layered walls, roof, porch, door, windows and stone foundation.
+    box("homestead-foundation", 2.8, 0.28, 2.35, -4.7, 0.16, -3.45, stone);
+    box("homestead-wall", 2.55, 1.55, 2.1, -4.7, 1.02, -3.45, plaster);
+    roof("homestead-roof", -4.7, 2.23, -3.45, 2.7, 2.35);
+    box("front-door", 0.55, 1.05, 0.09, -4.7, 0.72, -2.38, wood);
+    box("window-left", 0.48, 0.48, 0.08, -5.48, 1.2, -2.37, darkMetal);
+    box("window-right", 0.48, 0.48, 0.08, -3.92, 1.2, -2.37, darkMetal);
+    box("porch-floor", 1.65, 0.12, 0.7, -4.7, 0.25, -2.05, timber);
+    for (let i = 0; i < 3; i++) {
+      const post = MeshBuilder.CreateCylinder("porch-post-" + i, { height: 1.45, diameter: 0.12 }, scene);
+      post.position.set(-5.35 + i * 0.65, 0.98, -1.83); post.material = wood; cast(post);
+    }
+
+    // Processing shed and market stall give the district a recognisable purpose.
+    box("processing-foundation", 2.4, 0.22, 2, 3.9, 0.12, -3.5, stone);
+    box("processing-shed", 2.2, 1.55, 1.8, 3.9, 0.95, -3.5, timber);
+    roof("processing-roof", 3.9, 2.05, -3.5, 2.45, 2.05);
+    box("shed-door", 0.7, 1.05, 0.08, 3.9, 0.68, -2.57, wood);
+    box("market-counter", 2.1, 0.72, 0.75, 4.45, 0.45, 1.0, wood);
+    box("market-awning", 2.35, 0.16, 1.1, 4.45, 1.48, 1.0, terracotta);
+    for (let i = 0; i < 3; i++) {
+      const post = MeshBuilder.CreateCylinder("market-post-" + i, { height: 1.45, diameter: 0.1 }, scene);
+      post.position.set(3.55 + i * 0.9, 0.77, 1.35); post.material = wood; cast(post);
+    }
+    for (let i = 0; i < 5; i++) {
+      const sack = MeshBuilder.CreateSphere("market-sack-" + i, { diameter: 0.34, segments: 10 }, scene);
+      sack.scaling.y = 0.72; sack.position.set(3.75 + (i % 3) * 0.48, 0.92, 0.82 + Math.floor(i / 3) * 0.22);
+      sack.material = i % 2 ? plaster : gold; cast(sack);
+    }
+
+    // Timber fencing around the homestead and garden edges.
+    for (let i = 0; i < 13; i++) {
+      const x = -6.35 + i * 1.05;
+      box("fence-front-post-" + i, 0.13, 0.72, 0.13, x, 0.35, 5.15, wood);
+      if (i < 12) box("fence-front-rail-" + i, 1.0, 0.11, 0.1, x + 0.5, 0.48, 5.15, timber);
+    }
+    for (let i = 0; i < 9; i++) {
+      const z = -4.5 + i * 1.05;
+      box("fence-side-post-" + i, 0.13, 0.72, 0.13, -6.35, 0.35, z, wood);
+      if (i < 8) box("fence-side-rail-" + i, 0.1, 0.11, 1.0, -6.35, 0.48, z + 0.5, timber);
+    }
+
+    // Water tower, windmill and lamps become skyline landmarks.
+    const towerLegs = [[-1, -1], [1, -1], [-1, 1], [1, 1]];
+    towerLegs.forEach(([dx, dz], i) => {
+      const leg = MeshBuilder.CreateCylinder("water-tower-leg-" + i, { height: 2.1, diameter: 0.12 }, scene);
+      leg.position.set(5.55 + dx * 0.42, 1.05, -0.9 + dz * 0.42); leg.material = darkMetal; cast(leg);
+    });
+    const tank = MeshBuilder.CreateCylinder("water-tank", { diameter: 1.25, height: 0.9, tessellation: 16 }, scene);
+    tank.position.set(5.55, 2.25, -0.9); tank.material = water; cast(tank);
+    const millPole = MeshBuilder.CreateCylinder("windmill-pole", { height: 2.7, diameter: 0.16 }, scene);
+    millPole.position.set(-1.1, 1.35, 4.0); millPole.material = wood; cast(millPole);
+    const millHub = MeshBuilder.CreateSphere("windmill-hub", { diameter: 0.3 }, scene);
+    millHub.position.set(-1.1, 2.75, 4.0); millHub.material = gold; cast(millHub);
+    for (let i = 0; i < 4; i++) {
+      const blade = box("windmill-blade-" + i, 0.16, 1.35, 0.08, -1.1, 3.45, 4.0, plaster);
+      blade.rotation.z = i * Math.PI / 2;
+    }
+    for (const [x, z] of [[-3.1, 1.8], [2.3, 1.8], [5.6, 3.4]]) {
+      const pole = MeshBuilder.CreateCylinder("garden-lamp-pole", { height: 1.35, diameter: 0.09 }, scene);
+      pole.position.set(x, 0.68, z); pole.material = darkMetal; cast(pole);
+      const glow = MeshBuilder.CreateSphere("garden-lamp-glow", { diameter: 0.27 }, scene);
+      glow.position.set(x, 1.42, z); glow.material = gold;
+    }
+
+    // Dense low vegetation, flower beds and stone edging soften the geometry.
+    for (let i = 0; i < 28; i++) {
+      const x = -6 + ((i * 37) % 120) / 10;
+      const z = -5 + ((i * 23) % 95) / 10;
+      if ((x > -3.4 && x < 2.5 && z > -3.9 && z < 1.0) || (x > -5.9 && x < -3.2 && z > -4.8 && z < -1.8)) continue;
+      const shrub = MeshBuilder.CreateSphere("shrub-" + i, { diameter: 0.42 + (i % 3) * 0.12, segments: 8 }, scene);
+      shrub.scaling.y = 0.7; shrub.position.set(x, 0.22, z); shrub.material = i % 2 ? leafDark : leafLight; cast(shrub);
+    }
+    for (let i = 0; i < 18; i++) {
+      const x = -5.8 + (i % 9) * 1.35;
+      const z = 4.5 + (i % 2) * 0.35;
+      const flower = MeshBuilder.CreateSphere("flower-" + i, { diameter: 0.13, segments: 8 }, scene);
+      flower.position.set(x, 0.16, z); flower.material = i % 2 ? gold : plaster;
+    }
+
+    // A small farmer silhouette gives the scene a sense of scale.
+    const farmerBody = MeshBuilder.CreateCapsule("farmer-body", { height: 1.05, radius: 0.24 }, scene);
+    farmerBody.position.set(1.65, 0.65, 1.6); farmerBody.material = mat("farmer-clothes", "#315d78"); cast(farmerBody);
+    const farmerHead = MeshBuilder.CreateSphere("farmer-head", { diameter: 0.42, segments: 12 }, scene);
+    farmerHead.position.set(1.65, 1.34, 1.6); farmerHead.material = mat("farmer-skin", "#9c6849"); cast(farmerHead);
+    const farmerHat = MeshBuilder.CreateCylinder("farmer-hat", { diameterTop: 0.28, diameterBottom: 0.58, height: 0.15, tessellation: 12 }, scene);
+    farmerHat.position.set(1.65, 1.59, 1.6); farmerHat.material = gold; cast(farmerHat);
+
+    // Plot soil gets a raised, framed edge and a few scattered stones.
+    positions.forEach(([x, z], i) => {
+      for (let k = 0; k < 4; k++) {
+        const pebble = MeshBuilder.CreateSphere("plot-pebble-" + i + "-" + k, { diameter: 0.11, segments: 6 }, scene);
+        pebble.scaling.y = 0.45;
+        pebble.position.set(x - 0.62 + k * 0.38, 0.19, z + 0.76);
+        pebble.material = stone;
+      }
+    });
+
+    // Register scene meshes for soft real-time shadows.
+    scene.meshes.forEach((mesh) => {
+      if (mesh !== ground && mesh.isEnabled() && mesh.getTotalVertices() > 0) {
+        try { shadows.addShadowCaster(mesh); } catch { /* decorative mesh */ }
+      }
     });
 
     scene.onPointerObservable.add((pointerInfo) => {
