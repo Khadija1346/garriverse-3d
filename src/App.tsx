@@ -104,10 +104,10 @@ export default function App() {
     const house = MeshBuilder.CreateBox("farmhouse", { width: 2.2, height: 1.55, depth: 1.8 }, scene);
     house.position.set(-4.8, 0.78, -3.5);
     house.material = mat("house-wall", "#e8d6ad");
-    const roof = MeshBuilder.CreateCylinder("roof", { diameterTop: 0, diameterBottom: 2.8, height: 1.15, tessellation: 4 }, scene);
-    roof.rotation.y = Math.PI / 4;
-    roof.position.set(-4.8, 2.05, -3.5);
-    roof.material = mat("roof", "#a84e37");
+    const roofMesh = MeshBuilder.CreateCylinder("roof", { diameterTop: 0, diameterBottom: 2.8, height: 1.15, tessellation: 4 }, scene);
+    roofMesh.rotation.y = Math.PI / 4;
+    roofMesh.position.set(-4.8, 2.05, -3.5);
+    roofMesh.material = mat("roof", "#a84e37");
 
     const positions = [
       [-2.25, -0.5], [0.15, -0.5], [-2.25, -3.05], [0.15, -3.05],

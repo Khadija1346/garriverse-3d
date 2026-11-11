@@ -1,51 +1,35 @@
-# GARRIVERSE 3D — Isometric Farm Tycoon
+# GARRIVERSE 3D
 
-A mobile-first, isometric 3D farming game built around the GARRI ecosystem.
+A Nigerian culture and cassava-to-garri 3D farming game for the GARRI ecosystem.
 
-## Current milestone
+## Product vision
+Players prepare farmland, plant and care for cassava, harvest it, process it into garri, transport and store products, trade at a Nigerian market, complete quests, earn validated XP and connect with the GARRI community.
 
-The first milestone is a playable browser prototype:
-- Babylon.js 3D scene with an isometric-style camera
-- Four interactive cassava plots
-- Plant, grow, and harvest gameplay
-- Local prototype inventory and XP feedback
-- Responsive controls for mobile and desktop
+Nigerian culture is the foundation of the world and gameplay—not a decorative theme.
 
-## Planned districts
-
-1. Farm District — prepare plots, plant cassava, water and harvest
-2. Water District — wells, tanks and irrigation
-3. Processing District — turn harvested cassava into garri
-4. Warehouse — manage stored resources
-5. Garri Market — future market and approved ecosystem integrations
-
-## Planned platform integrations
-
-- Wallet linking using nonce-based signature verification
-- Server-authoritative player state, inventory, XP and quest claims
-- Quests, achievements and leaderboard
-- Moderator Office with server-side role checks and audit logs
-- DAO embedding bridge and community links
-- NFT support only after the GARRI team approves the contracts and product rules
-
-## Important economy boundary
-
-The current prototype does **not** issue real $GARRI, transferable tokens, NFTs, cash-outs or on-chain rewards. Client-side XP and inventory are prototype-only. Production gameplay must be validated and persisted by a trusted backend before any rewards are represented as real.
-
-## Stack
-
+## Technology
 - React + TypeScript + Vite
-- Babylon.js
-- Planned backend: Netlify Functions, PostgreSQL and Drizzle ORM
-- Planned validation/testing: Zod, Vitest and Playwright
+- Babylon.js 8 for the 3D world
+- Production backend and PostgreSQL persistence: implementation in progress
+- Netlify deployment target
 
-## Run locally
+## Production systems
+- Farming, crop lifecycle, equipment and vehicles
+- Cassava processing and garri market economy
+- Server-authoritative inventory, XP, quests and leaderboard
+- Wallet signature authentication
+- Approved NFT collection integration
+- Moderator roles and audit logs
+- Website, X, Telegram channel and group links
 
-```bash
-npm install
-npm run dev
-```
+## Community destinations
+- Website: https://garri.world/checker
+- X: https://x.com/Garrionchain
+- Telegram destination currently known: https://t.me/GARRIONCHAIN
 
-## Project status
+The Telegram URL above is the known community destination; the official group invite must be confirmed separately if it differs from the channel.
 
-Early prototype foundation. See the repository commits for implemented functionality.
+## Development status
+The repository currently contains an early local-only 3D farming scene. The production-foundation branch starts the production domain rules and architecture. The existing scene is not yet a production release: backend persistence, server validation, complete districts, real vehicle gameplay, wallet authentication, approved NFT integration, licensed high-quality 3D assets, automated tests and deployment verification are still required.
+
+Never represent local-only XP, inventory, NFTs or token balances as real or transferable rewards.
