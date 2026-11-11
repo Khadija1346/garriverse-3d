@@ -12,6 +12,7 @@ import {
   PointerEventTypes,
   Scene,
   StandardMaterial,
+  TransformNode,
   Vector3,
 } from "@babylonjs/core";
 
@@ -25,6 +26,10 @@ export default function App() {
   const sceneRef = useRef<Scene | null>(null);
   const plotMeshes = useRef<Map<number, Mesh>>(new Map());
   const cropVisuals = useRef<Map<number, Mesh[]>>(new Map());
+  const tractorRef = useRef<TransformNode | null>(null);
+  const tractorWheelsRef = useRef<Mesh[]>([]);
+  const tractorDrivingRef = useRef(false);
+  const [tractorDriving, setTractorDriving] = useState(false);
   const [plots, setPlots] = useState<Plot[]>([
     { id: 1, state: "empty", plantedAt: null },
     { id: 2, state: "empty", plantedAt: null },
@@ -247,6 +252,60 @@ export default function App() {
     const farmerHat = MeshBuilder.CreateCylinder("farmer-hat", { diameterTop: 0.28, diameterBottom: 0.58, height: 0.15, tessellation: 12 }, scene);
     farmerHat.position.set(1.65, 1.59, 1.6); farmerHat.material = gold; cast(farmerHat);
 
+    // Farm tractor with trailer: a usable vehicle that drives the farm lane.
+    const tractor = new TransformNode("farm-tractor-root", scene);
+    tractor.position.set(-5.2, 0, 2.55);
+    tractorRef.current = tractor;
+    const tractorGreen = mat("tractor-enamel-green", "#2d8b4d");
+    const tractorDark = mat("tractor-chassis", "#26332d");
+    const tractorYellow = mat("tractor-safety-yellow", "#f3c84b");
+    const tireMat = mat("tractor-rubber", "#202522");
+    const rimMat = mat("tractor-wheel-rim", "#c5c9bd");
+    const glassMat = mat("tractor-cab-glass", "#8fc7cf");
+    const vehiclePart = (mesh: Mesh, x: number, y: number, z: number, material: StandardMaterial) => {
+      mesh.parent = tractor; mesh.position.set(x, y, z); mesh.material = material; cast(mesh); return mesh;
+    };
+    vehiclePart(MeshBuilder.CreateBox("tractor-chassis-base", {width:2.05,height:0.28,depth:0.88}, scene), 0, 0.7, 0, tractorDark);
+    vehiclePart(MeshBuilder.CreateBox("tractor-engine-hood", {width:0.92,height:0.72,depth:0.82}, scene), 0.48, 1.13, -0.02, tractorGreen);
+    vehiclePart(MeshBuilder.CreateBox("tractor-front-grille", {width:0.07,height:0.42,depth:0.58}, scene), 0.96, 1.1, -0.02, darkMetal);
+    vehiclePart(MeshBuilder.CreateBox("tractor-roof", {width:0.95,height:0.12,depth:0.88}, scene), -0.38, 2.35, 0, tractorYellow);
+    vehiclePart(MeshBuilder.CreateBox("tractor-windscreen", {width:0.08,height:0.95,depth:0.72}, scene), 0.08, 1.78, 0, glassMat);
+    vehiclePart(MeshBuilder.CreateBox("tractor-seat", {width:0.42,height:0.18,depth:0.42}, scene), -0.52, 1.35, 0, wood);
+    vehiclePart(MeshBuilder.CreateCylinder("tractor-exhaust", {height:0.62,diameter:0.09}, scene), 0.63, 1.72, -0.27, darkMetal);
+    for (const z of [-0.28, 0.28]) {
+      vehiclePart(MeshBuilder.CreateSphere("tractor-headlamp", {diameter:0.17}, scene), 1.02, 1.38, z, tractorYellow);
+    }
+    const tractorWheels: Mesh[] = [];
+    for (const x of [-0.62, 0.68]) {
+      for (const z of [-0.52, 0.52]) {
+        const rear = x < 0;
+        const wheel = MeshBuilder.CreateCylinder("tractor-wheel", {diameter:rear ? 0.94 : 0.65, height:0.28, tessellation:20}, scene);
+        wheel.rotation.x = Math.PI / 2;
+        wheel.parent = tractor;
+        wheel.position.set(x, rear ? 0.52 : 0.38, z);
+        wheel.material = tireMat;
+        cast(wheel);
+        const rim = MeshBuilder.CreateCylinder("tractor-rim", {diameter:rear ? 0.43 : 0.31, height:0.3, tessellation:16}, scene);
+        rim.rotation.x = Math.PI / 2; rim.parent = tractor;
+        rim.position.set(x, rear ? 0.52 : 0.38, z * 1.015); rim.material = rimMat; cast(rim);
+        tractorWheels.push(wheel);
+      }
+    }
+    tractorWheelsRef.current = tractorWheels;
+    // Small two-wheel utility trailer for harvested cassava.
+    const trailer = new TransformNode("cassava-trailer", scene);
+    trailer.parent = tractor; trailer.position.set(-1.75, 0.05, 0);
+    const trailerBed = MeshBuilder.CreateBox("trailer-bed", {width:1.45,height:0.18,depth:1.1}, scene);
+    trailerBed.parent = trailer; trailerBed.position.y = 0.72; trailerBed.material = wood; cast(trailerBed);
+    for (const [x,z] of [[-0.7,-0.5],[-0.7,0.5],[0.7,-0.5],[0.7,0.5]] as [number,number][]) {
+      const rail = MeshBuilder.CreateBox("trailer-rail", {width:0.12,height:0.52,depth:0.12}, scene);
+      rail.parent = trailer; rail.position.set(x,1.02,z); rail.material = timber; cast(rail);
+    }
+    const trailerWheelA = MeshBuilder.CreateCylinder("trailer-wheel-a", {diameter:0.48,height:0.2,tessellation:16}, scene);
+    trailerWheelA.parent = trailer; trailerWheelA.rotation.x = Math.PI/2; trailerWheelA.position.set(0,0.4,-0.62); trailerWheelA.material = tireMat; cast(trailerWheelA);
+    const trailerWheelB = trailerWheelA.clone("trailer-wheel-b");
+    if (trailerWheelB) { trailerWheelB.position.z = 0.62; cast(trailerWheelB); tractorWheels.push(trailerWheelA,trailerWheelB); }
+
     // Plot soil gets a raised, framed edge and a few scattered stones.
     positions.forEach(([x, z], i) => {
       for (let k = 0; k < 4; k++) {
@@ -272,7 +331,19 @@ export default function App() {
       if (match) setSelected(Number(match[1]));
     });
 
-    engine.runRenderLoop(() => scene.render());
+    let lastFrame = performance.now();
+    engine.runRenderLoop(() => {
+      const now = performance.now();
+      const delta = Math.min((now - lastFrame) / 1000, 0.05);
+      lastFrame = now;
+      if (tractorDrivingRef.current && tractorRef.current) {
+        const root = tractorRef.current;
+        root.position.x += delta * 1.8;
+        if (root.position.x > 5.4) root.position.x = -5.4;
+        tractorWheelsRef.current.forEach((wheel) => { wheel.rotation.z += delta * 4.2; });
+      }
+      scene.render();
+    });
     const resize = () => engine.resize();
     window.addEventListener("resize", resize);
 
@@ -338,6 +409,15 @@ export default function App() {
   }, [plots]);
 
   const activePlot = plots.find((plot) => plot.id === selected)!;
+
+  const toggleTractor = () => {
+    const next = !tractorDrivingRef.current;
+    tractorDrivingRef.current = next;
+    setTractorDriving(next);
+    setNotice(next
+      ? "Tractor started. It is driving along the farm lane."
+      : "Tractor parked. Select a plot to continue farming.");
+  };
 
   const plant = () => {
     if (activePlot.state !== "empty") {
@@ -421,6 +501,7 @@ export default function App() {
             <div className="progress-label"><span>Crop growth</span><b>{progress}%</b></div>
             <button className="primary-action" onClick={plant} disabled={activePlot.state !== "empty" || seeds < 1}>＋ Plant cassava</button>
             <button className="secondary-action" onClick={harvest} disabled={activePlot.state !== "ready"}>Harvest cassava</button>
+            <button className="secondary-action" onClick={toggleTractor}>{tractorDriving ? "Park tractor" : "Drive farm tractor"}</button>
             <p className="action-help">Tap a soil plot in the 3D world to select it. Crops mature automatically in this prototype.</p>
           </section>
 
