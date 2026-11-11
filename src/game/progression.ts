@@ -4,25 +4,21 @@ export type PlayerProgress = { totalXp: number; level: number; currentLevelXp: n
 
 export function getLevelForXp(totalXp: number): number {
   const xp = Math.max(0, Math.floor(totalXp));
-  let level = 1;
   for (let index = 1; index < LEVEL_THRESHOLDS.length; index += 1) {
-    if (xp < LEVEL_THRESHOLDS[index]) break;
-    level = index + 1;
+    if (xp < LEVEL_THRESHOLDS[index]) return index;
   }
-  if (level === LEVEL_THRESHOLDS.length && xp >= LEVEL_THRESHOLDS[level - 1]) {
-    return level + Math.floor((xp - LEVEL_THRESHOLDS[level - 1]) / 900);
-  }
-  return level;
+  return LEVEL_THRESHOLDS.length + Math.floor((xp - LEVEL_THRESHOLDS[LEVEL_THRESHOLDS.length - 1]) / 900);
 }
 
 export function getPlayerProgress(totalXp: number): PlayerProgress {
   const xp = Math.max(0, Math.floor(totalXp));
   const level = getLevelForXp(xp);
-  const baseIndex = Math.min(level - 1, LEVEL_THRESHOLDS.length - 1);
-  const currentThreshold = LEVEL_THRESHOLDS[baseIndex];
+  const currentThreshold = level < LEVEL_THRESHOLDS.length
+    ? LEVEL_THRESHOLDS[level - 1]
+    : LEVEL_THRESHOLDS[LEVEL_THRESHOLDS.length - 1] + (level - LEVEL_THRESHOLDS.length) * 900;
   const nextThreshold = level < LEVEL_THRESHOLDS.length
     ? LEVEL_THRESHOLDS[level]
-    : currentThreshold + (level - LEVEL_THRESHOLDS.length + 1) * 900;
+    : currentThreshold + 900;
   const span = nextThreshold - currentThreshold;
   const earned = xp - currentThreshold;
   return {
