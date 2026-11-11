@@ -24,6 +24,7 @@ export default function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const sceneRef = useRef<Scene | null>(null);
   const plotMeshes = useRef<Map<number, Mesh>>(new Map());
+  const cropVisuals = useRef<Map<number, Mesh[]>>(new Map());
   const [plots, setPlots] = useState<Plot[]>([
     { id: 1, state: "empty", plantedAt: null },
     { id: 2, state: "empty", plantedAt: null },
@@ -281,6 +282,7 @@ export default function App() {
       engine.dispose();
       sceneRef.current = null;
       plotMeshes.current.clear();
+      cropVisuals.current.clear();
     };
   }, []);
 
@@ -295,6 +297,43 @@ export default function App() {
     }, 500);
     return () => window.clearInterval(timer);
   }, []);
+
+  useEffect(() => {
+    const scene = sceneRef.current;
+    if (!scene) return;
+    const plotPositions: Record<number, [number, number]> = {
+      1: [-2.25, -0.5], 2: [0.15, -0.5], 3: [-2.25, -3.05], 4: [0.15, -3.05],
+    };
+    const leafMaterial = new StandardMaterial("living-cassava-leaf", scene);
+    leafMaterial.diffuseColor = Color3.FromHexString("#4f9b45");
+    const stemMaterial = new StandardMaterial("living-cassava-stem", scene);
+    stemMaterial.diffuseColor = Color3.FromHexString("#8c7544");
+    plots.forEach((plot) => {
+      cropVisuals.current.get(plot.id)?.forEach((mesh) => mesh.dispose());
+      cropVisuals.current.delete(plot.id);
+      if (plot.state === "empty") return;
+      const [x, z] = plotPositions[plot.id];
+      const stage = plot.state === "ready" ? 1 : 0.68;
+      const created: Mesh[] = [];
+      const stem = MeshBuilder.CreateCylinder("cassava-stem-" + plot.id, { height: 0.72 * stage, diameter: 0.1 }, scene);
+      stem.position.set(x, 0.48, z); stem.material = stemMaterial; created.push(stem);
+      for (let i = 0; i < 7; i++) {
+        const leaf = MeshBuilder.CreateSphere("cassava-leaf-" + plot.id + "-" + i, { diameter: 0.42 * stage, segments: 8 }, scene);
+        const angle = (i / 7) * Math.PI * 2;
+        leaf.scaling.set(1.35, 0.34, 0.68);
+        leaf.position.set(x + Math.cos(angle) * 0.28 * stage, 0.78 * stage, z + Math.sin(angle) * 0.28 * stage);
+        leaf.rotation.y = angle; leaf.material = leafMaterial; created.push(leaf);
+      }
+      if (plot.state === "ready") {
+        for (let i = 0; i < 3; i++) {
+          const root = MeshBuilder.CreateCylinder("cassava-root-" + plot.id + "-" + i, { height: 0.35, diameterTop: 0.08, diameterBottom: 0.17 }, scene);
+          root.rotation.z = Math.PI / 2; root.position.set(x - 0.25 + i * 0.22, 0.25, z + 0.35);
+          root.material = mat("cassava-root-material-" + plot.id, "#d6b77c"); created.push(root);
+        }
+      }
+      cropVisuals.current.set(plot.id, created);
+    });
+  }, [plots]);
 
   const activePlot = plots.find((plot) => plot.id === selected)!;
 
