@@ -328,7 +328,9 @@ export default function App() {
         for (let i = 0; i < 3; i++) {
           const root = MeshBuilder.CreateCylinder("cassava-root-" + plot.id + "-" + i, { height: 0.35, diameterTop: 0.08, diameterBottom: 0.17 }, scene);
           root.rotation.z = Math.PI / 2; root.position.set(x - 0.25 + i * 0.22, 0.25, z + 0.35);
-          root.material = mat("cassava-root-material-" + plot.id, "#d6b77c"); created.push(root);
+          const rootMaterial = new StandardMaterial("cassava-root-material-" + plot.id + "-" + i, scene);
+          rootMaterial.diffuseColor = Color3.FromHexString("#d6b77c");
+          root.material = rootMaterial; created.push(root);
         }
       }
       cropVisuals.current.set(plot.id, created);
